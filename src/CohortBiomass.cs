@@ -675,17 +675,23 @@ namespace Landis.Extension.Succession.NECN
                 LAI_Growth_limit = 0.0;
             }
 
-            if (Main.Month == 6)
-                SiteVars.LAI[site] += lai; //Tracking LAI.
+            double site_lai = SiteLAIContribution(cohort, site);
 
-            SiteVars.MonthlyLAI[site][Main.Month] += lai;
+            if (Main.Month == 6)
+                //SiteVars.LAI[site] += lai; //Tracking LAI.
+                 SiteVars.LAI[site] += site_lai; //Tracking LAI.
+
+            //SiteVars.MonthlyLAI[site][Main.Month] += lai;
+            SiteVars.MonthlyLAI[site][Main.Month] += site_lai;
 
             // Chihiro 2021.02.23
             // Tracking Tree species LAI above grasses
             if (!SpeciesData.Grass[cohort.Species])
-                SiteVars.MonthlyLAI_Trees[site][Main.Month] += lai;
+                //SiteVars.MonthlyLAI_Trees[site][Main.Month] += lai;
+                SiteVars.MonthlyLAI_Trees[site][Main.Month] += site_lai;
             else
-                SiteVars.MonthlyLAI_Grasses[site][Main.Month] += lai; // Chihiro, 2021.03.30: tentative
+                //SiteVars.MonthlyLAI_Grasses[site][Main.Month] += lai; // Chihiro, 2021.03.30: tentative
+                SiteVars.MonthlyLAI_Grasses[site][Main.Month] += site_lai;
 
 
             if (PlugIn.ModelCore.CurrentTime > 0 && OtherData.CalibrateMode)
@@ -703,6 +709,36 @@ namespace Landis.Extension.Succession.NECN
 
             return LAI_Growth_limit;
 
+        }
+
+        // A cohort's contribution to site LAI under stand-level LAI: // MaxLAI * cohortWoodC / (KLAI + siteWoodC) * seasonal adjustment 
+        // Summed over the cohorts of one species this equals MaxLAI * C / (KLAI + C_site), so the 
+        // total does not depend on how the stand's wood is split into cohorts. For a single-cohort 
+        // site it equals the cohort's own curve, MaxLAI * woodC / (KLAI + woodC). 
+        // siteWoodC is the site's total wood carbon at the start of the month (Main.Run).
+
+        public static double SiteLAIContribution(ICohort cohort, ActiveSite site)
+        {
+            dynamic additionalParameters = cohort.Data.AdditionalParameters;
+            double leafC = (double)additionalParameters.LeafBiomass * 0.47; 
+            double woodC = (double)additionalParameters.WoodBiomass * 0.47; 
+            double siteWoodC = SiteVars.TotalWoodBiomass[site] * 0.47; 
+            double btolai = SpeciesData.BiomassToLAI[cohort.Species]; 
+            double klai = SpeciesData.K_LAI[cohort.Species]; 
+            double maxlai = SpeciesData.MaxLAI[cohort.Species];
+            double seasonal_adjustment = 1.0; 
+            if (SpeciesData.LeafLongevity[cohort.Species] <= 1.0) 
+                seasonal_adjustment = Math.Max(0.0, 1.0 - Math.Exp(btolai * leafC));
+
+            // Math.Max guards against a stale site total (e.g., a cohort added since it was computed).
+            double site_lai = maxlai * woodC / (klai + Math.Max(siteWoodC, woodC)) * seasonal_adjustment;
+            
+            // Same special case as the cohort curve: MaxLAI = 0 makes LAI depend on foliage only. if (maxlai * woodC <= 0.0) site_lai = seasonal_adjustment;
+            // Deciduous species have no leaves outside the growing season.
+            
+            if (SpeciesData.LeafLongevity[cohort.Species] <= 1.0 && (Main.Month > SpeciesData.FoliageDropMonth[cohort.Species] || Main.Month < 3)) 
+                site_lai = 0.0; 
+            return site_lai; 
         }
 
         private static double calculate_LAI_Competition(ICohort cohort, ActiveSite site)
@@ -729,11 +765,13 @@ namespace Landis.Extension.Succession.NECN
             if (!SpeciesData.Grass[cohort.Species] &&
                 cohort.Data.Biomass > ComputeGrassBiomass(site) * grassThresholdMultiplier)
             {
-                monthly_cumulative_LAI = SiteVars.MonthlyLAI_Trees[site][Main.Month];
+                //monthly_cumulative_LAI = SiteVars.MonthlyLAI_Trees[site][Main.Month];
+                monthly_cumulative_LAI = SiteVars.SiteTreeLAI[site];
             }
             else
             {
-                monthly_cumulative_LAI = SiteVars.MonthlyLAI_Trees[site][Main.Month] + SiteVars.MonthlyLAI_GrassesLastMonth[site]; // Chihiro, 2021.03.30: tentative. trees + grass layer
+                //monthly_cumulative_LAI = SiteVars.MonthlyLAI_Trees[site][Main.Month] + SiteVars.MonthlyLAI_GrassesLastMonth[site]; // Chihiro, 2021.03.30: tentative. trees + grass layer
+                monthly_cumulative_LAI = SiteVars.SiteTreeLAI[site] + SiteVars.MonthlyLAI_GrassesLastMonth[site];
             }
 
             var k = SpeciesData.CompetitionIndex[cohort.Species];

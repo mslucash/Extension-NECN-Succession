@@ -44,6 +44,7 @@ namespace Landis.Extension.Succession.NECN
         public static ISiteVar<int> FireDisturbedYear;
         public static ISiteVar<double> slope;
         public static ISiteVar<double> aspect;
+        public static ISiteVar<double> SiteTreeLAI; 
 
         //Drought params
 
@@ -155,6 +156,7 @@ namespace Landis.Extension.Succession.NECN
             CohortCRootC = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
                         
             TotalWoodBiomass    = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
+            SiteTreeLAI        = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
             WoodMortality        = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
             Nvol                = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
             PrevYearMortality   = PlugIn.ModelCore.Landscape.NewSiteVar<int>();

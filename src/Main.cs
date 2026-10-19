@@ -72,6 +72,7 @@ namespace Landis.Extension.Succession.NECN
                     SiteVars.MonthlyAnaerobicEffect[site][Month] = 0.0;
                     SiteVars.SourceSink[site].Carbon = 0.0;
                     SiteVars.TotalWoodBiomass[site] = ComputeWoodBiomass((ActiveSite) site);
+                    SiteVars.SiteTreeLAI[site] = ComputeSiteTreeLAI((ActiveSite)site); // full stand LAI, so competition does not depend on cohort order
 
 
                     var ppt = ClimateRegionData.AnnualClimate[ecoregion].MonthlyPrecip[Month];
@@ -290,6 +291,18 @@ namespace Landis.Extension.Succession.NECN
                 }
             }
             return woodBiomass;
+        }
+
+        public static double ComputeSiteTreeLAI(ActiveSite site) { 
+            double lai = 0.0; 
+            if (SiteVars.Cohorts[site] != null) 
+                foreach (ISpeciesCohorts speciesCohorts in SiteVars.Cohorts[site]) 
+                { 
+                    if (SpeciesData.Grass[speciesCohorts.Species]) continue; 
+                    foreach (ICohort cohort in speciesCohorts) 
+                        lai += CohortBiomass.SiteLAIContribution(cohort, site); 
+            } 
+            return lai; 
         }
 
         //---------------------------------------------------------------------
