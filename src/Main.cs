@@ -49,6 +49,8 @@ namespace Landis.Extension.Succession.NECN
 
                 for (MonthCnt = 0; MonthCnt < 12; MonthCnt++)
                 {
+                    SiteVars.ResetNurseryLogAreaRatioCache(site);
+
                     // Calculate mineral N fractions based on coarse root biomass.  Only need to do once per year.
                     if (MonthCnt == 0)
                     {
@@ -72,6 +74,7 @@ namespace Landis.Extension.Succession.NECN
                     SiteVars.MonthlyAnaerobicEffect[site][Month] = 0.0;
                     SiteVars.SourceSink[site].Carbon = 0.0;
                     SiteVars.TotalWoodBiomass[site] = ComputeWoodBiomass((ActiveSite) site);
+                    SiteVars.LiveBiomass[site] = ComputeLivingBiomass(siteCohorts);
                     SiteVars.SiteTreeLAI[site] = ComputeSiteTreeLAI((ActiveSite)site); // full stand LAI, so competition does not depend on cohort order
 
 
@@ -96,7 +99,6 @@ namespace Landis.Extension.Succession.NECN
                     SiteVars.MineralN[site] += monthlyNdeposition;
                     //PlugIn.ModelCore.UI.WriteLine("Ndeposition={0},MineralN={1:0.00}.", monthlyNdeposition, SiteVars.MineralN[site]);
 
-                    double liveBiomass = (double) ComputeLivingBiomass(siteCohorts);
                     double baseFlow, stormFlow, AET;
 
                     //if (site.Location.Row == 120)
@@ -112,7 +114,7 @@ namespace Landis.Extension.Succession.NECN
                     //    }
                     //}
 
-                    SoilWater.Run(y, Month, liveBiomass, site, out baseFlow, out stormFlow, out AET);
+                    SoilWater.Run(y, Month, SiteVars.LiveBiomass[site], site, out baseFlow, out stormFlow, out AET);
 
                     PlugIn.AnnualWaterBalance += ppt - AET;
 
@@ -122,25 +124,23 @@ namespace Landis.Extension.Succession.NECN
                     //Drought vars
                     //Update monthly temperature and soil water
                     //TODO SF add to DroughtMortality class. This is mostly already duplicated in the drought climate spinup
-                    if (DroughtMortality.UseDrought | DroughtMortality.OutputSoilWaterAvailable | DroughtMortality.OutputTemperature | DroughtMortality.OutputClimateWaterDeficit)
+                    if (DroughtMortality.TrackClimateMetrics)
                     {
                         //Initialize each year by adding a new list element
                         if (MonthCnt == 0)
                         {
-                            
                             SiteVars.SoilWater10[site].Add(0);
                             SiteVars.Temp10[site].Add(0);
-
                         }
 
                         int list_index = SiteVars.SoilWater10[site].Count - 1; //track how many elements are in the climate lists, to avoid them growing too long
 
-                       if (summer.Contains(Month))
-                            {
-                                //add monthly temperatures
-                                SiteVars.Temp10[site][list_index] += ClimateRegionData.AnnualClimate[ecoregion].MonthlyTemp[Month];
-                            }
-                       //add monthly water content
+                        if (summer.Contains(Month))
+                        {
+                            //add monthly temperatures
+                            SiteVars.Temp10[site][list_index] += ClimateRegionData.AnnualClimate[ecoregion].MonthlyTemp[Month];
+                        }
+                        //add monthly water content
                         SiteVars.SoilWater10[site][list_index] += SiteVars.MeanSoilWater[site];
 
                         //Do this just once a year, after CWD is calculated above

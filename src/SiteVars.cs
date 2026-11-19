@@ -19,7 +19,8 @@ namespace Landis.Extension.Succession.NECN
         public static ISiteVar<double> FireCEfflux;
         public static ISiteVar<double> FireNEfflux;
         public static ISiteVar<double> Nvol;
-        public static ISiteVar<double> TotalWoodBiomass;
+        public static ISiteVar<double> TotalWoodBiomass; 
+        public static ISiteVar<double> LiveBiomass;
         public static ISiteVar<int> PrevYearMortality;
         public static ISiteVar<byte> FireSeverity;
         public static ISiteVar<double> WoodMortality;
@@ -61,7 +62,19 @@ namespace Landis.Extension.Succession.NECN
         public static ISiteVar<double> normalSWA;
         public static ISiteVar<double> normalCWD;
         public static ISiteVar<double> normalTemp;
-            
+
+        public static Dictionary<ActiveSite, double> NurseryLogAreaRatioCache = new Dictionary<ActiveSite, double>();
+
+        public static void ResetNurseryLogAreaRatioCache(ActiveSite site)
+        {
+            if (NurseryLogAreaRatioCache.ContainsKey(site))
+                NurseryLogAreaRatioCache.Remove(site);
+        }
+
+        public static void ResetNurseryLogAreaRatioCache()
+        {
+            NurseryLogAreaRatioCache.Clear();
+        }
 
         //---------------------------------------------------------------------
 
@@ -156,6 +169,7 @@ namespace Landis.Extension.Succession.NECN
             CohortCRootC = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
                         
             TotalWoodBiomass    = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
+            LiveBiomass = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
             SiteTreeLAI        = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
             WoodMortality        = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
             Nvol                = PlugIn.ModelCore.Landscape.NewSiteVar<double>();
